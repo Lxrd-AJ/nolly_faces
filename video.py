@@ -109,9 +109,6 @@ while cap.isOpened():
     
     frame_cnt += 1
 
-    if frame_cnt < 3000: #TODO: Remove! Hack to skip frames
-        continue
-
     if ret:   
         img = prep_image(frame, inp_dim)
 #        cv2.imshow("a", frame)
