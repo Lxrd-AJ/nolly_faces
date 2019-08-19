@@ -77,13 +77,14 @@ def write(x, results):
     c2 = tuple(x[3:5].int())
     img = results
     cls = int(x[-1])
-    color = random.choice(colors)
+    color = color_class[cls]
     label = "{0}".format(classes[cls])
-    cv2.rectangle(img, c1, c2,color, 1)
-    t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_PLAIN, 1 , 1)[0]
+    cv2.rectangle(img, c1, c2,color, 2)
+    font_scale = 0.5
+    t_size = cv2.getTextSize(label, cv2.FONT_HERSHEY_DUPLEX, font_scale , 1)[0]
     c2 = c1[0] + t_size[0] + 3, c1[1] + t_size[1] + 4
-    cv2.rectangle(img, c1, c2,color, 5)
-    cv2.putText(img, label, (c1[0], c1[1] + t_size[1] + 4), cv2.FONT_HERSHEY_PLAIN, 1, [225,255,255], 1);
+    cv2.rectangle(img, c1, c2,color, 1)
+    cv2.putText(img, label, (c1[0], c1[1] + t_size[1] + 4), cv2.FONT_HERSHEY_DUPLEX, font_scale, [225,255,255], 2)
     return img
 
 
@@ -97,15 +98,20 @@ cap = cv2.VideoCapture(videofile)
 
 assert cap.isOpened(), 'Cannot capture source'
 
-frames = 0  
+frame_cnt = 0  
 start = time.time()
+
+classes = load_classes('data/coco.names')    
+color_class = [tuple([random.randint(0,255) for i in range(3)]) for _ in classes]
 
 while cap.isOpened():
     ret, frame = cap.read()
-
-    #TODO: Remove! Hack to skip frames
-    frames += 1
     
+    frame_cnt += 1
+
+    if frame_cnt < 3000: #TODO: Remove! Hack to skip frames
+        continue
+
     if ret:   
         img = prep_image(frame, inp_dim)
 #        cv2.imshow("a", frame)
@@ -122,17 +128,15 @@ while cap.isOpened():
 
 
         if type(output) == int:
-            print("FPS of the video is {:5.4f}".format( frames / (time.time() - start)))
+            print("FPS of the video is {:5.4f}".format( frame_cnt / (time.time() - start)))
             # cv2.imshow("frame", frame)
-            cv2.imwrite(f"det/video/{frames}.png", frame)
-            print(f"Saving frame {frames} ...")
+            cv2.imwrite(f"det/video/{frame_cnt}.png", frame)
+            print(f"Saving No detections in frame {frame_cnt} ...")
             key = cv2.waitKey(1)
             if key & 0xFF == ord('q'):
                 break
             continue
-        
-        
-        
+          
 
         im_dim = im_dim.repeat(output.size(0), 1)
         scaling_factor = torch.min(416/im_dim,1)[0].view(-1,1)
@@ -145,28 +149,22 @@ while cap.isOpened():
         for i in range(output.shape[0]):
             output[i, [1,3]] = torch.clamp(output[i, [1,3]], 0.0, im_dim[i,0])
             output[i, [2,4]] = torch.clamp(output[i, [2,4]], 0.0, im_dim[i,1])
-    
-        
-        
-
-        classes = load_classes('data/coco.names')
-        colors = pkl.load(open("pallete.dms", "rb"))
 
         list(map(lambda x: write(x, frame), output))
         
         # cv2.imshow("frame", frame)
-        cv2.imwrite(f"det/video/{frames}.png", frame)
-        print(f"Saving frame {frames} ...")
+        cv2.imwrite(f"det/video/{frame_cnt}.png", frame)
+        print(f"Saving frame {frame_cnt} ...")
         key = cv2.waitKey(1)
         if key & 0xFF == ord('q'):
             break
         
         print(time.time() - start)
-        print("FPS of the video is {:5.2f}".format( frames / (time.time() - start)))
+        print("FPS of the video is {:5.2f}".format( frame_cnt / (time.time() - start)))
     else:
         break     
 
 
 #ffmpeg -framerate 30 -pattern_type glob -i 'det/video/*.png' -c:v libx264 -pix_fmt yuv420p yolo_video.mp4
-#ffmpeg -framerate 30 -i det/video/%d.png -c:v libx264 -pix_fmt yuv420p yolo_video.mp4
+#ffmpeg -start_number 0 -framerate 30 -i det/video/%d.png -c:v libx264 -pix_fmt yuv420p yolo_video.mp4
 
