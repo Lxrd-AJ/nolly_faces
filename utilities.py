@@ -8,7 +8,34 @@ import cv2
 from torch.autograd import Variable
 from math import floor, ceil
 
+def load_classes(names):
+    fp = open(names,"r")
+    names = fp.read().split("\n")[:-1]
+    return names
 
+def prep_image(img, inp_dim):
+    """
+    Prepare image for inputting to the neural network. 
+    
+    Returns a Variable 
+    """
+    img = cv2.resize(img, (inp_dim, inp_dim))
+    img = img[:,:,::-1].transpose((2,0,1)).copy()
+    img = torch.from_numpy(img).float().div(255.0).unsqueeze(0)
+    return img
+
+
+def letterbox_image(img, inp_dim):
+    '''resize image with unchanged aspect ratio using padding'''
+    img_w, img_h = img.shape[1], img.shape[0]
+    w, h = inp_dim
+    new_w = int(img_w * min(w/img_w, h/img_h))
+    new_h = int(img_h * min(w/img_w, h/img_h))
+    resized_image = cv2.resize(img, (new_w,new_h), interpolation=cv2.INTER_CUBIC)
+
+    canvas = np.full((inp_dim[1], inp_dim[0],3), 128)
+    canvas[(h-new_h)//2:(h-new_h)//2 + new_h,(w-new_w)//2:(w-new_w)//2 + new_w,  :] = resized_image
+    return canvas
 
 def bbox_iou(box1, box2):
     #Get the coordinates of bounding boxes
@@ -22,6 +49,11 @@ def bbox_iou(box1, box2):
     #intersection area
     inter_area = torch.clamp(inter_rect_x2 - inter_rect_x1 + 1, min=0) * torch.clamp(inter_rect_y2 - inter_rect_y1 + 1, min=0)
     #union area
+    b1_area = (b1_x2 - b1_x1 + 1) * (b1_y2 - b1_y1 + 1)
+    b2_area = (b2_x2 - b2_x1 + 1) * (b2_y2 - b2_y1 + 1)
+
+    iou = inter_area / (b1_area + b2_area - inter_area)
+    return iou
 
 
 def unique(tensor):
@@ -78,13 +110,23 @@ def write_results(prediction, confidence, num_classes, nms_conf=0.4):
                     ious = bbox_iou(image_pred_class[i].unsqueeze(0),image_pred_class[i+1:])
                 except (ValueError, IndexError) as e:
                     break
-                iou_mask = (ious < nms_conf).float().unsqueeze(1)
-                print(ious)
-                print(iou_mask)
+                iou_mask = (ious < nms_conf).float().unsqueeze(1)                
                 image_pred_class[i+1:] *= iou_mask
                 #remove the non-zero entities
                 non_zero_idx = torch.nonzero(image_pred_class[:,4]).squeeze()
                 image_pred_class = image_pred_class[non_zero_idx].view(-1,7)
+            batch_idx = image_pred_class.new(image_pred_class.size(0),1).fill_(idx)
+            seq = batch_idx, image_pred_class
+            if not write:
+                output = torch.cat(seq,1)
+                write = True
+            else:
+                out = torch.cat(seq, 1)
+                output = torch.cat((output,out))
+    try:
+        return output
+    except:
+        return 0
 
 
 def predict_transform(prediction, inp_dim, anchors, num_classes, CUDA=True):

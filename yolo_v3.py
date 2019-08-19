@@ -264,5 +264,6 @@ if __name__ == "__main__":
     pred = model(inp,torch.cuda.is_available())
     print(pred)
     print("Prediction size", pred.size())
-    _ = write_results(pred, 0.7, 80)
+    output = write_results(pred, 0.7, 80)
+    print("Outputs", output)
     
