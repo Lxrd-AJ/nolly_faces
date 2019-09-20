@@ -1,7 +1,7 @@
 from __future__ import division
 from torch.autograd import Variable
 from utilities import *
-from yolo_v3 import YOLO
+from yolo_v3_offshelf import YOLO
 import time
 import torch 
 import torch.nn as nn
@@ -162,6 +162,6 @@ while cap.isOpened():
         break     
 
 
-#ffmpeg -framerate 30 -pattern_type glob -i 'det/video/*.png' -c:v libx264 -pix_fmt yuv420p yolo_video.mp4
-#ffmpeg -start_number 0 -framerate 30 -i det/video/%d.png -c:v libx264 -pix_fmt yuv420p yolo_video.mp4
+#ffmpeg -start_number 0 -framerate 60 -i det/video/%d.png -c:v libx264 -pix_fmt yuv420p yolo_video.mp4
+#nohup script.sh &
 
