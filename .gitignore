@@ -2,6 +2,8 @@ yolo_video.mp4
 IMG_4254.MOV
 yolo_video_drive_2.mp4
 
+models/yolov1.weights
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
