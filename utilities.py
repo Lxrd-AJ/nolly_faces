@@ -69,7 +69,7 @@ def write_results(prediction, confidence, num_classes, nms_conf=0.4):
     conf_mask = (prediction[:,:,4] > confidence).float().unsqueeze(2)    
     prediction = prediction * conf_mask    
     box_corner = prediction.new(prediction.shape)
-    #change the (center x, center y, height, width) attributes of our boxes, to 
+    #change the (center x, center y, width, height) attributes of our boxes, to 
     #(top-left corner x, top-left corner y, right-bottom corner x, right-bottom corner y).
     box_corner[:,:,0] = (prediction[:,:,0] - prediction[:,:,2]/2)
     box_corner[:,:,1] = (prediction[:,:,1] - prediction[:,:,3]/2)

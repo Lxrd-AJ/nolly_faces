@@ -17,25 +17,65 @@ from collections import OrderedDict
 class Yolo_V1(nn.Module):
     def __init__(self, config):
         super(Yolo_V1,self).__init__()
+        self.num_bbox = 2
+        self.input_size = (448,448)
+        self.num_classes = -1
         self.blocks = self.load_config(config)        
         self.conv_layers, self.linear_layers = self.parse_config(self.blocks)
-        self.num_bound_boxes = 2
+        
 
     def forward(self, x):        
         actv = x
         for i in range(len(self.conv_layers)):
             actv = self.conv_layers[i](actv)
+            block_info = self.blocks[i+1]            
+            assert not torch.isnan(actv).any()
+
         lin_inp = torch.flatten(actv)
         lin_inp = lin_inp.view(x.size()[0],-1) #resize it so that it is flattened by batch             
-        lin_out = self.linear_layers(lin_inp)        
-        det_tensor = lin_out.view(-1,((self.num_bound_boxes*5) + self.num_classes),self.grid,self.grid)
+        lin_out = self.linear_layers(lin_inp)  
+        lin_out = torch.sigmoid(lin_out)            
+        det_tensor = lin_out.view(-1,((self.num_bbox * 5) + self.num_classes),self.grid,self.grid)
         return det_tensor #torch.flatten(det_tensor)
+
+    def transform_predict(self, p_tensor):
+        batch_size = p_tensor.size(0)
+        stride = self.input_size[0] // p_tensor.size(2)
+        grid_size = self.input_size[0] // stride
+        num_bbox = (self.num_bbox * 5) + self.num_classes
+        predictions = p_tensor.view(batch_size, num_bbox, grid_size*grid_size)
+        predictions = predictions.transpose(1,2).contiguous()
+        num_bbox = 5 + self.num_classes
+        
+        for batch in range(predictions.size(0)):
+            prediction = predictions[batch]
+            # print(prediction)
+            # p_object = prediction[:,0]
+            # print("Probability Objects", p_object)
+            bboxes = prediction[:,:10]
+            bbox_1 = convert_center_coords_to_noorm( bboxes[:,:5] )
+            bbox_2 = convert_center_coords_to_noorm( bboxes[:,5:] )
+            print(bbox_2)
+            cls_probs = prediction[:,10:]
+            # print("Bounding Boxes", bboxes)
+            # print("Class Probabilities", cls_probs.size())
+            max_cprob, max_idx = cls_probs.max(1) #1 is along the rows
+            # print(max_cprob.size())
+            # print(convert_cls_idx_name(self.cls_names, max_idx.numpy()))
+
+    def build_class_map(self, fname):        
+        fp = open(fname,"r")
+        names = fp.read().split("\n")
+        names_dict = {idx:e for idx, e in enumerate(names)}
+        self.cls_names = names_dict
+        return names_dict
+            
 
     def load_weights(self, weights_file):
         with open(weights_file,'rb') as file:
             #NB: An internal file pointer is maintained, so read the header first
             header = np.fromfile(file, dtype=np.int32, count=5)
-            weights = np.fromfile(file, dtype=np.float32)
+            weights = np.fromfile(file, dtype=np.float32)    
             idx = 0  
             # populate the convolutional layers           
             for i in range(len(self.conv_layers)):
@@ -86,11 +126,13 @@ class Yolo_V1(nn.Module):
                     conv_weights = torch.from_numpy(weights[idx:idx+num_conv_weights])
                     idx += num_conv_weights
                     conv_weights = conv_weights.view_as(conv.weight.data)
-                    conv.weight.data.copy_(conv_weights)
-            
+                    conv.weight.data.copy_(conv_weights)       
+                else:
+                    # print(block_info)
+                    pass
             # Populate the linear layers
             for k in range(len(self.linear_layers)):
-                print(self.linear_layers[k])
+                # print(self.linear_layers[k])
                 linear = self.linear_layers[k]
                 # copy the bias
                 num_lin_bias = linear.bias.numel()

@@ -8,6 +8,7 @@ Face Recognition on actors from Nollywood movies
     - [x] https://www.analyticsvidhya.com/blog/2018/12/practical-guide-object-detection-yolo-framewor-python/
 - [x] https://blog.paperspace.com/tag/series-yolo/
     - [x] https://blog.paperspace.com/how-to-implement-a-yolo-object-detector-in-pytorch/
+- [ ] https://medium.com/oracledevs/final-layers-and-loss-functions-of-single-stage-detectors-part-1-4abbfa9aa71c
 - [ ] https://towardsdatascience.com/faced-cpu-real-time-face-detection-using-deep-learning-1488681c1602
 - [ ] https://machinethink.net/blog/object-detection-with-yolo/
 - [ ] https://pjreddie.com/publications/
