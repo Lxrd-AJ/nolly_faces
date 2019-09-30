@@ -49,19 +49,19 @@ class Yolo_V1(nn.Module):
         
         for batch in range(predictions.size(0)):
             prediction = predictions[batch]
-            # print(prediction)
-            # p_object = prediction[:,0]
-            # print("Probability Objects", p_object)
+            
             bboxes = prediction[:,:10]
             bbox_1 = convert_center_coords_to_noorm( bboxes[:,:5] )
             bbox_2 = convert_center_coords_to_noorm( bboxes[:,5:] )
-            print(bbox_2)
             cls_probs = prediction[:,10:]
-            # print("Bounding Boxes", bboxes)
-            # print("Class Probabilities", cls_probs.size())
-            max_cprob, max_idx = cls_probs.max(1) #1 is along the rows
-            # print(max_cprob.size())
-            # print(convert_cls_idx_name(self.cls_names, max_idx.numpy()))
+            
+            max_cprob, max_idx = cls_probs.max(1) #1 is along the rows            
+            pred_classes = convert_cls_idx_name(self.cls_names, max_idx.numpy())
+
+            # for idx in range(bboxes.size(0)):
+            iou_a_b = iou(bbox_1, bbox_2)
+
+            #TODO: Continue, confidence thresholding
 
     def build_class_map(self, fname):        
         fp = open(fname,"r")
@@ -72,6 +72,10 @@ class Yolo_V1(nn.Module):
             
 
     def load_weights(self, weights_file):
+        """TODO: Fix bug here
+        Either i am using the wrong weights file or I am not reading from this weight file
+        properly. Either way, there is a lot of unread weights values left in the file.
+        """
         with open(weights_file,'rb') as file:
             #NB: An internal file pointer is maintained, so read the header first
             header = np.fromfile(file, dtype=np.int32, count=5)
@@ -147,10 +151,10 @@ class Yolo_V1(nn.Module):
                 linear.weight.data.copy_(lin_weights)
                 idx += num_lin_weights
 
-            print("Index into weights", idx)
-            print("Total weights ", len(weights))
-            print("Num weights left ", len(weights) - idx)
-            print("---" * 15)
+            # print("Index into weights", idx)
+            # print("Total weights ", len(weights))
+            # print("Num weights left ", len(weights) - idx)
+            # print("---" * 15)
                         
 
     def conv(self, item, prev_filters, filters, batch_norm): 
