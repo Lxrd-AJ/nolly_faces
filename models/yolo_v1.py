@@ -47,21 +47,27 @@ class Yolo_V1(nn.Module):
         predictions = predictions.transpose(1,2).contiguous()
         num_bbox = 5 + self.num_classes
         
+        results = {}
         for batch in range(predictions.size(0)):
             prediction = predictions[batch]
-            
+                        
             bboxes = prediction[:,:10]
             bbox_1 = convert_center_coords_to_noorm( bboxes[:,:5] )
             bbox_2 = convert_center_coords_to_noorm( bboxes[:,5:] )
-            cls_probs = prediction[:,10:]
+            bboxes = max_box(bbox_1, bbox_2)
             
+            cls_probs = prediction[:,10:]
             max_cprob, max_idx = cls_probs.max(1) #1 is along the rows            
             pred_classes = convert_cls_idx_name(self.cls_names, max_idx.numpy())
+                                    
+            bboxes = torch.cat((bboxes, max_idx.unsqueeze(1).float()),1)            
+            bboxes = confidence_threshold(bboxes, 0.5) # confidence thresholding            
+            #TODO: Continue; Non-maximum suppression for each class
+            results[batch] = bboxes
+        
+        return results
+            
 
-            # for idx in range(bboxes.size(0)):
-            iou_a_b = iou(bbox_1, bbox_2)
-
-            #TODO: Continue, confidence thresholding
 
     def build_class_map(self, fname):        
         fp = open(fname,"r")
@@ -75,6 +81,8 @@ class Yolo_V1(nn.Module):
         """TODO: Fix bug here
         Either i am using the wrong weights file or I am not reading from this weight file
         properly. Either way, there is a lot of unread weights values left in the file.
+        
+        TODO: Break down this function into smaller blocks
         """
         with open(weights_file,'rb') as file:
             #NB: An internal file pointer is maintained, so read the header first
@@ -167,6 +175,9 @@ class Yolo_V1(nn.Module):
         return conv
         
     def parse_config(self, blocks):
+        """
+        TODO: Break down this function into smaller blocks
+        """
         conv_layers = nn.ModuleList()              
         prev_filters = 3 #image of 3 channels        
         for idx, item in enumerate(blocks[1:-2]):

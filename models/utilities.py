@@ -23,6 +23,21 @@ def parse_config(cfg_file):
         blocks.append(block) 
         return blocks
 
+def max_box(b1, b2):
+    assert b1.size() == b2.size()
+    A = torch.zeros(b1.size()).float()
+    for i in range(b1.size(0)):
+        #0 is the index of the probability scores
+        A[i,:] = b1[i,:] if b1[i,0] > b2[i,0] else b2[i,:]
+    return A
+
+def confidence_threshold(A, conf_thresh):
+    #0 is the index of the confidence value
+    conf_mask = (A[:,0] > conf_thresh).float().unsqueeze(1)
+    conf_mask = conf_mask * A
+    conf_mask = torch.nonzero(conf_mask[:,0]).squeeze()
+    return A[conf_mask,:]    
+
 def iou(a,b):    
     a_x_min, a_y_min = a[:,1], a[:,2]
     a_x_max, a_y_max = (a[:,3] + a_x_min), (a[:,4] + a_y_min)
