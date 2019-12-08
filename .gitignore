@@ -3,6 +3,7 @@ IMG_4254.MOV
 yolo_video_drive_2.mp4
 
 models/yolov1.weights
+models/extraction.conv.weights
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

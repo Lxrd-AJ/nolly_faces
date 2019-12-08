@@ -23,6 +23,12 @@ def parse_config(cfg_file):
         blocks.append(block) 
         return blocks
 
+def build_class_names(class_file):        
+    fp = open(class_file,"r")
+    names = fp.read().split("\n")
+    names_dict = {idx:e for idx, e in enumerate(names)}    
+    return names_dict
+
 def max_box(b1, b2):
     assert b1.size() == b2.size()
     A = torch.zeros(b1.size()).float()
